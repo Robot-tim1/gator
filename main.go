@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"os"
+
+	"golang.org/x/term"
+)
 
 func main() {
-	fmt.Printf("Gator\n")
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+	startRepl()
 }
