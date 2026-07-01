@@ -1,17 +1,35 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
-	"golang.org/x/term"
+	"github.com/Robot-tim1/gator/internal/config"
+	//"golang.org/x/term"
 )
 
 func main() {
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		panic(err)
-	}
-	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
-	startRepl()
+	cfg, err := config.Read()
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+
+	s := &state{cfg: &cfg}
+	commands := commands{handlers: make(map[string]func(*state, command) error)}
+
+	commands.register("login", handlerLogin)
+
+	if len(os.Args) < 2 {
+		fmt.Printf("Not enough arguments\n")
+		os.Exit(1)
+	}
+	commandName := os.Args[1]
+	args := os.Args[2:]
+	cmd := command{name: commandName, args: args}
+	err = commands.run(s, cmd)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
 }
