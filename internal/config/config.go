@@ -38,16 +38,6 @@ func Read() (Config, error) {
 	return cfg, nil
 }
 
-func getConfigFilePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("error getting home directory: %w", err)
-	}
-
-	filename := filepath.Join(home, configFileName)
-	return filename, nil
-}
-
 func write(cfg Config) error {
 	filename, err := getConfigFilePath()
 	if err != nil {
@@ -59,4 +49,14 @@ func write(cfg Config) error {
 		return fmt.Errorf("error marshalling config file: %w", err)
 	}
 	return os.WriteFile(filename, data, 0644)
+}
+
+func getConfigFilePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("error getting home directory: %w", err)
+	}
+
+	filename := filepath.Join(home, configFileName)
+	return filename, nil
 }

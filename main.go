@@ -23,8 +23,10 @@ func main() {
 		fmt.Printf("Not enough arguments\n")
 		os.Exit(1)
 	}
+
 	commandName := os.Args[1]
 	args := os.Args[2:]
+
 	cmd := command{name: commandName, args: args}
 	err = commands.run(s, cmd)
 	if err != nil {
