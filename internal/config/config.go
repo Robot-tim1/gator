@@ -33,7 +33,7 @@ func Read() (Config, error) {
 	var cfg Config
 	err = json.Unmarshal(data, &cfg)
 	if err != nil {
-		return Config{}, fmt.Errorf("error unmarshalling savedata: %w", err)
+		return Config{}, fmt.Errorf("error unmarshalling config file: %w", err)
 	}
 	return cfg, nil
 }
