@@ -1,36 +1,52 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
+	"log"
 	"os"
 
 	"github.com/Robot-tim1/gator/internal/config"
+	"github.com/Robot-tim1/gator/internal/database"
+	_ "github.com/lib/pq"
 )
+
+type state struct {
+	db  *database.Queries
+	cfg *config.Config
+}
 
 func main() {
 
 	cfg, err := config.Read()
 	if err != nil {
-		fmt.Printf("%v", err)
+		log.Fatalf("error reading config: %v", err)
 	}
 
-	s := &state{cfg: &cfg}
+	db, err := sql.Open("postgres", cfg.DbURL)
+	if err != nil {
+		log.Fatalf("error connecting to db: %v", err)
+	}
+
+	s := &state{
+		cfg: &cfg,
+		db:  database.New(db),
+	}
+
 	commands := commands{handlers: make(map[string]func(*state, command) error)}
 
 	commands.register("login", handlerLogin)
+	commands.register("register", handlerRegister)
 
 	if len(os.Args) < 2 {
-		fmt.Printf("Not enough arguments\n")
-		os.Exit(1)
+		log.Fatal("Usage: cli <command> [args...]")
 	}
 
-	commandName := os.Args[1]
-	args := os.Args[2:]
+	cmdName := os.Args[1]
+	cmdArgs := os.Args[2:]
 
-	cmd := command{name: commandName, args: args}
+	cmd := command{name: cmdName, args: cmdArgs}
 	err = commands.run(s, cmd)
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
