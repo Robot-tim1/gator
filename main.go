@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/Robot-tim1/gator/internal/config"
-	//"golang.org/x/term"
 )
 
 func main() {
