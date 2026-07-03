@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Robot-tim1/gator/internal/database"
+	"github.com/Robot-tim1/gator/internal/rss"
 	"github.com/google/uuid"
 )
 
@@ -17,7 +18,7 @@ func handlerLogin(s *state, cmd command) error {
 
 	name := cmd.args[0]
 
-	_, err := s.db.GetUser(context.Background(), name)
+	_, err := s.db.GetUserFromName(context.Background(), name)
 	if err != nil {
 		return fmt.Errorf("error couldn't find user: %w", err)
 	}
@@ -36,12 +37,14 @@ func handlerRegister(s *state, cmd command) error {
 	}
 
 	name := cmd.args[0]
-
-	_, err := s.db.CreateUser(context.Background(), database.CreateUserParams{
+	params := database.CreateUserParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		Name:      name})
+		Name:      name,
+	}
+
+	_, err := s.db.CreateUser(context.Background(), params)
 	if err != nil {
 		return fmt.Errorf("error creating user record: %w", err)
 	}
@@ -75,6 +78,61 @@ func handlerUsers(s *state, cmd command) error {
 		} else {
 			fmt.Printf("* %s\n", user)
 		}
+	}
+	return nil
+}
+
+func handlerAgg(s *state, cmd command) error {
+	feed, err := rss.GetFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return fmt.Errorf("error occurred while getting feed: %w", err)
+	}
+
+	fmt.Println(feed)
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.args) != 2 {
+		return errors.New("The addfeed handler expects 2 arguments, the feed's name and url")
+	}
+
+	user, err := s.db.GetUserFromName(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("error getting current user: %w", err)
+	}
+
+	params := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      cmd.args[0],
+		Url:       cmd.args[1],
+		UserID:    user.ID,
+	}
+
+	feed, err := s.db.CreateFeed(context.Background(), params)
+	if err != nil {
+		return fmt.Errorf("error creating feed record: %w", err)
+	}
+
+	fmt.Println(feed)
+	return nil
+}
+
+func handlerFeeds(s *state, cmd command) error {
+	feeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting feeds from database: %w", err)
+	}
+
+	for _, feed := range feeds {
+		user, err := s.db.GetUserFromId(context.Background(), feed.UserID)
+		if err != nil {
+			return fmt.Errorf("error getting user of feed: %w", err)
+		}
+
+		fmt.Printf("(%s: %s) feed created by %s\n", feed.Name, feed.Url, user.Name)
 	}
 	return nil
 }
