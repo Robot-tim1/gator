@@ -13,7 +13,7 @@ import (
 
 func handlerLogin(s *state, cmd command) error {
 	if len(cmd.args) == 0 {
-		return errors.New("the login handler expects a single argument, the username.")
+		return errors.New("the login command expects a single argument, a name.")
 	}
 
 	name := cmd.args[0]
@@ -33,7 +33,7 @@ func handlerLogin(s *state, cmd command) error {
 
 func handlerRegister(s *state, cmd command) error {
 	if len(cmd.args) == 0 {
-		return errors.New("the register handler expects a single argument, a name.")
+		return errors.New("the register command expects a single argument, a name.")
 	}
 
 	name := cmd.args[0]
@@ -94,7 +94,7 @@ func handlerAgg(s *state, cmd command) error {
 
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
-		return errors.New("The addfeed handler expects 2 arguments, the feed's name and url")
+		return errors.New("The addfeed command expects 2 arguments, the feed's name and url")
 	}
 
 	createParams := database.CreateFeedParams{
@@ -147,7 +147,7 @@ func handlerFeeds(s *state, cmd command) error {
 
 func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return errors.New("The follow handler expects on argument, the url of a feed")
+		return errors.New("The follow command expects on argument, the url of a feed")
 	}
 
 	feed, err := s.db.GetFeedFromUrl(context.Background(), cmd.args[0])
@@ -168,7 +168,7 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 		return fmt.Errorf("error following feed: %w", err)
 	}
 
-	fmt.Printf("%s now follows %s\n", followRow.UserName, followRow.FeedName)
+	fmt.Printf("%s followed %s\n", followRow.UserName, followRow.FeedName)
 	return nil
 }
 
@@ -186,5 +186,26 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 	for _, item := range followedFeeds {
 		fmt.Printf(" - %s\n", item.FeedName)
 	}
+	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return errors.New("The unfollow command expects on argument, the url of a feed")
+	}
+
+	feed, err := s.db.GetFeedFromUrl(context.Background(), cmd.args[0])
+	if err != nil {
+		return fmt.Errorf("error getting feed from database: %w", err)
+	}
+
+	params := database.DeleteFeedFollowParams{UserID: user.ID, FeedID: feed.ID}
+
+	err = s.db.DeleteFeedFollow(context.Background(), params)
+	if err != nil {
+		return fmt.Errorf("error deleting from feed_follow table: %w", err)
+	}
+
+	fmt.Printf("%s unfollowed %s\n", user.Name, feed.Name)
 	return nil
 }

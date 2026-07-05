@@ -34,4 +34,5 @@ func (c *commands) registerAll() {
 	c.register("feeds", handlerFeeds)
 	c.register("follow", middlewareLoggedIn(handlerFollow))
 	c.register("following", middlewareLoggedIn(handlerFollowing))
+	c.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 }
