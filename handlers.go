@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Robot-tim1/gator/internal/database"
-	"github.com/Robot-tim1/gator/internal/rss"
 	"github.com/google/uuid"
 )
 
@@ -82,13 +81,30 @@ func handlerUsers(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAgg(s *state, cmd command) error {
-	feed, err := rss.GetFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return fmt.Errorf("error occurred while getting feed: %w", err)
+func handlerAgg(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return errors.New("The agg command expects on argument, the time between requests like 1s, 1m, 1h, etc.")
 	}
 
-	fmt.Println(feed)
+	time_between_reqs := cmd.args[0]
+
+	timeReq := time.Second * 10
+	inputTime, err := time.ParseDuration(time_between_reqs)
+	if err != nil {
+		fmt.Printf("error parsing input time, using default time of 10 seconds\n")
+	} else {
+		timeReq = inputTime
+	}
+
+	fmt.Printf("Collecting feeds every %s\n", timeReq)
+	ticker := time.Tick(timeReq)
+	for range ticker {
+		err = scrapeFeeds(s, user)
+		if err != nil {
+			return fmt.Errorf("error scraping feeds: %w", err)
+		}
+	}
+
 	return nil
 }
 

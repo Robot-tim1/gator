@@ -29,7 +29,7 @@ func (c *commands) registerAll() {
 	c.register("register", handlerRegister)
 	c.register("reset", handlerReset)
 	c.register("users", handlerUsers)
-	c.register("agg", handlerAgg)
+	c.register("agg", middlewareLoggedIn(handlerAgg))
 	c.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	c.register("feeds", handlerFeeds)
 	c.register("follow", middlewareLoggedIn(handlerFollow))
