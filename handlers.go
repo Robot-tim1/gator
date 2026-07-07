@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Robot-tim1/gator/internal/database"
@@ -223,5 +224,34 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 	}
 
 	fmt.Printf("%s unfollowed %s\n", user.Name, feed.Name)
+	return nil
+}
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	var limit int32
+	limit = 2
+	if len(cmd.args) == 1 {
+		templimit, err := strconv.ParseInt(cmd.args[0], 10, 64)
+		if err == nil {
+			limit = int32(templimit)
+		}
+	}
+
+	getPostsParams := database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  limit,
+	}
+
+	posts, err := s.db.GetPostsForUser(context.Background(), getPostsParams)
+	if err != nil {
+		return fmt.Errorf("error getting followed posts: %w", err)
+	}
+
+	for _, post := range posts {
+		fmt.Printf("Title: %s\n", post.Title)
+		fmt.Printf("Published at %s\n\n", post.PublishedAt)
+		fmt.Printf("Description: %s\n\n", post.Description.String)
+		fmt.Printf("Link: %s\n\n", post.Url)
+	}
 	return nil
 }

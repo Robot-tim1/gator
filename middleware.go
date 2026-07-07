@@ -9,6 +9,8 @@ import (
 
 	"github.com/Robot-tim1/gator/internal/database"
 	"github.com/Robot-tim1/gator/internal/rss"
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
@@ -21,6 +23,8 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 		return handler(s, c, user)
 	}
 }
+
+const Layout = "Mon, 02 Jan 2006 15:04:05 -0700"
 
 // I know this function doesn't really fit here
 // but I've got no other place to put it
@@ -55,7 +59,37 @@ func scrapeFeeds(s *state, user database.User) error {
 	}
 
 	for _, item := range fetchedFeed.Channel.Item {
-		fmt.Printf("%s\n", item.Title)
+
+		pubDate, err := time.Parse(Layout, item.PubDate)
+		if err != nil {
+			return fmt.Errorf("error parsing publication date: %w", err)
+		}
+
+		description := sql.NullString{String: "", Valid: false}
+		if item.Description != "" {
+			description = sql.NullString{String: item.Description, Valid: true}
+		}
+
+		CreatePostParams := database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Title:       item.Title,
+			Url:         item.Link,
+			Description: description,
+			PublishedAt: pubDate,
+			FeedID:      nextFeed.ID,
+		}
+
+		_, err = s.db.CreatePost(context.Background(), CreatePostParams)
+		if err != nil {
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+				// do nothing
+			} else {
+				return fmt.Errorf("error creating post record: %w", err)
+			}
+		}
 	}
 	return nil
 }

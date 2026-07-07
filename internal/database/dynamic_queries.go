@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// could just be a join query or something, but I don't care I wanted to do a dynamic query
 func (q *Queries) GetNextFeedFromFollows(ctx context.Context, feeds []GetFeedFollowsForUserRow) (Feed, error) {
 	placeholders := make([]string, len(feeds))
 	args := make([]any, len(feeds))
