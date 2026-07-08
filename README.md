@@ -49,3 +49,22 @@ Then you'll have to make a config file in your home directory, typically ~/.gato
 }
 ```
 Now that should be all the steps to set it up. If you want to see the commands you can run, look below to see available commands  
+
+## Commands
+Prefix all commands with gator
+
+| Command | Description |
+|---------|-------------|
+| `register <username>` | Registers and logs in as given name |
+| `login <username>` | Logs into any registered users |
+| `users` | Displays all registered users and currently logged in user |
+| `addfeed <name> <url>` | Adds feed with a custom name |
+| `feeds` | Displays all added feeds and which user added them |
+| `follow <url>` | Follows a feed by the given url |
+| `unfollow <url>` | Unfollows a feed by the given url |
+| `following` | Displays all the feeds the user follows by name |
+| `agg [time]` | Aggregates from followed feeds in intervals of the given time (e.g., 1m, 30s). default 10 seconds |
+| `browse [limit]` | Displays the posts aggregated from the feeds, post number limited by given number, default 2 |
+| `reset` | Deletes all the data from the database, resetting everything. Use at your own discretion |
+
+Use agg in the background on a different terminal, while you interact with the cli on another terminal
