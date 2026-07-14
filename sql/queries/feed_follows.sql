@@ -25,6 +25,7 @@ INNER JOIN feeds
 SELECT 
     users.name as user_name,
     feeds.name as feed_name, 
+    feeds.url as feed_url,
     feed_follows.*
 FROM 
     feed_follows

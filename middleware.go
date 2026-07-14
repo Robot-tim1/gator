@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/Robot-tim1/gator/internal/database"
@@ -24,7 +25,8 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 	}
 }
 
-const Layout = "Mon, 02 Jan 2006 15:04:05 -0700"
+const Layout1 = "Mon, 02 Jan 2006 15:04:05 -0700"
+const Layout2 = "Mon, 02 Jan 2006 15:04:05 MST"
 
 // I know this function doesn't really fit here
 // but I've got no other place to put it
@@ -38,10 +40,18 @@ func scrapeFeeds(s *state, user database.User) error {
 		return errors.New("user is not following any feeds to aggregate")
 	}
 
-	nextFeed, err := s.db.GetNextFeedFromFollows(context.Background(), userFeedFollows)
-	if err != nil {
-		return fmt.Errorf("error getting next feed: %w", err)
+	for _, followedFeed := range userFeedFollows {
+		go scraper(s, followedFeed)
 	}
+	return nil
+}
+
+func scraper(s *state, followedFeed database.GetFeedFollowsForUserRow) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered from panic in scraper: %v", r)
+		}
+	}()
 
 	markParams := database.MarkFeedFetchedParams{
 		UpdatedAt: time.Now(),
@@ -49,20 +59,32 @@ func scrapeFeeds(s *state, user database.User) error {
 			Time:  time.Now(),
 			Valid: true,
 		},
-		ID: nextFeed.ID,
+		ID: followedFeed.FeedID,
 	}
-	s.db.MarkFeedFetched(context.Background(), markParams)
-
-	fetchedFeed, err := rss.GetFeed(context.Background(), nextFeed.Url)
+	err := s.db.MarkFeedFetched(context.Background(), markParams)
 	if err != nil {
-		return fmt.Errorf("error getting feed: %w", err)
+		log.Printf("Couldn't mark feed %s as fetched: %v", followedFeed.FeedID, err)
+		return
 	}
 
+	fetchedFeed, err := rss.GetFeed(context.Background(), followedFeed.FeedUrl)
+	if err != nil {
+		log.Printf("Error getting feed %s: %v", followedFeed.FeedUrl, err)
+		return
+	}
+	log.Printf("fetched from feed: %s", fetchedFeed.Channel.Title)
+	layouts := []string{Layout1, Layout2, time.ANSIC, time.RFC3339, time.RFC822}
 	for _, item := range fetchedFeed.Channel.Item {
-
-		pubDate, err := time.Parse(Layout, item.PubDate)
-		if err != nil {
-			return fmt.Errorf("error parsing publication date: %w", err)
+		var pubDate time.Time
+		for _, layout := range layouts {
+			pubDate, err = time.Parse(layout, item.PubDate)
+			if err == nil {
+				break
+			}
+		}
+		if pubDate.IsZero() {
+			log.Printf("Error parsing date for item %s: no matching layouts", item.Title)
+			continue
 		}
 
 		description := sql.NullString{String: "", Valid: false}
@@ -78,18 +100,16 @@ func scrapeFeeds(s *state, user database.User) error {
 			Url:         item.Link,
 			Description: description,
 			PublishedAt: pubDate,
-			FeedID:      nextFeed.ID,
+			FeedID:      followedFeed.FeedID,
 		}
 
 		_, err = s.db.CreatePost(context.Background(), CreatePostParams)
 		if err != nil {
 			var pqErr *pq.Error
 			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
-				// do nothing
-			} else {
-				return fmt.Errorf("error creating post record: %w", err)
+				continue
 			}
+			log.Printf("Error creating post record: %v", err)
 		}
 	}
-	return nil
 }

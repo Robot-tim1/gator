@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -99,13 +100,16 @@ func handlerAgg(s *state, cmd command, user database.User) error {
 
 	fmt.Printf("Collecting feeds every %s\n", timeReq)
 	ticker := time.Tick(timeReq)
+	err = scrapeFeeds(s, user)
+	if err != nil {
+		log.Printf("error scraping feeds: %v", err)
+	}
 	for range ticker {
 		err = scrapeFeeds(s, user)
 		if err != nil {
-			return fmt.Errorf("error scraping feeds: %w", err)
+			log.Printf("error scraping feeds: %v", err)
 		}
 	}
-
 	return nil
 }
 

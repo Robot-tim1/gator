@@ -94,6 +94,7 @@ const getFeedFollowsForUser = `-- name: GetFeedFollowsForUser :many
 SELECT 
     users.name as user_name,
     feeds.name as feed_name, 
+    feeds.url as feed_url,
     feed_follows.id, feed_follows.created_at, feed_follows.updated_at, feed_follows.user_id, feed_follows.feed_id
 FROM 
     feed_follows
@@ -107,6 +108,7 @@ WHERE users.id = $1
 type GetFeedFollowsForUserRow struct {
 	UserName  string
 	FeedName  string
+	FeedUrl   string
 	ID        uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -126,6 +128,7 @@ func (q *Queries) GetFeedFollowsForUser(ctx context.Context, id uuid.UUID) ([]Ge
 		if err := rows.Scan(
 			&i.UserName,
 			&i.FeedName,
+			&i.FeedUrl,
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
